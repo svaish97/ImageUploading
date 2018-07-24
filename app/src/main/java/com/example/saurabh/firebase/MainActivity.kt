@@ -14,11 +14,10 @@ import kotlinx.android.synthetic.main.activity_main.*
 import android.support.v4.app.ActivityCompat
 import android.util.Log
 import android.widget.Toast
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.*
 
 import java.util.*
-
+import kotlin.collections.ArrayList
 
 
 class MainActivity : AppCompatActivity() {
@@ -26,6 +25,7 @@ class MainActivity : AppCompatActivity() {
      var storageRefernce: StorageReference? = null
      var filePath: Uri? =null
      var mstorage:DatabaseReference ?=null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +46,13 @@ class MainActivity : AppCompatActivity() {
         })
 
         btnUpload.setOnClickListener({
-            upload()
+            if(ivUploaded.drawable==null)
+            {
+                Toast.makeText(this,"Please select an image",Toast.LENGTH_SHORT).show()
+            }
+            else {
+                upload()
+            }
         })
 
         viewUploads.setOnClickListener({
@@ -57,29 +63,20 @@ class MainActivity : AppCompatActivity() {
 
     fun upload()
     {
-
-       // val file = Uri.fromFile(File(filePath!!.path))
         val riversRef = storageRefernce!!.child("images/"+UUID.randomUUID().toString())
         val progressDial=ProgressDialog(this)
         progressDial.setTitle("Uploading...")
         progressDial.show()
         riversRef.putFile(filePath!!)
                 .addOnSuccessListener( { taskSnapshot ->
-
-
                     progressDial.dismiss()
                     Toast.makeText(this,"Successfully uploaded",Toast.LENGTH_SHORT).show()
-                    val url = taskSnapshot.storage.downloadUrl
 
-                    val result = url.result
+                    taskSnapshot.storage.downloadUrl.addOnSuccessListener {
+                        val result = it.toString()
+                        mstorage!!.push().setValue(result)
 
-                    val imagePath = result.toString()
-                  //  val uploades=uploaded(imagePath)
-                /* val uploadedId=*/
-                    mstorage!!.push().setValue(imagePath)
-                    //key.toString()
-                   // mstorage!!.child(uploadedId).setValue(uploaded)
-
+                    }
 
                 })
                 .addOnFailureListener( {
@@ -89,9 +86,8 @@ class MainActivity : AppCompatActivity() {
                 .addOnProgressListener {
                     val progress = (100.0*it.bytesTransferred/it.totalByteCount)
                     progressDial.setMessage("Uploaded "+progress+"%")
+                    progressDial.setCancelable(false)
                 }
-
-
 
     }
 
@@ -116,11 +112,7 @@ class MainActivity : AppCompatActivity() {
             )
             filePath= data.data!!
         }
-
-        Log.d("Error","Images set before")
         Picasso.get().load(filePath).resize(500,500).into(ivUploaded)
-
-        Log.d("Error","Images set after")
 
     }
 }
